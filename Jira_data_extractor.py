@@ -121,7 +121,7 @@ if response.status_code == 200:
         'Priority', 'Status', 'Reporter_name', 'Creator_name', 'Resolution',
         'Resolution_date', 'Activity_date', 'Created_date', 'Updated_date',
         'Link', 'timeoriginalestimate', 'timeestimate',
-         'timespent', 
+        'aggregatetimeoriginalestimate', 'timespent', 'aggregatetimespent',
         'Sprint', 'bug_source', 'labels', 'Time_Spent', 'Estimated_Time'
     ]
 
@@ -168,9 +168,9 @@ if response.status_code == 200:
             f"{url.split('/rest')[0]}/browse/{issue.get('key', '')}",
             formatted_time_estimate,
             fields.get("timeestimate", 0),
-            #fields.get("aggregatetimeoriginalestimate", 0),
+            fields.get("aggregatetimeoriginalestimate", 0),
             timespent_value,
-            #fields.get("aggregatetimespent", 0),
+            fields.get("aggregatetimespent", 0),
             sprint_name,
             bug_src,
             ", ".join(fields.get("labels", [])),
