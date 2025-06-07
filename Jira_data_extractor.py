@@ -96,7 +96,7 @@ def timespent(data):
         return ["None"] * len(data)
 
 # Jira API config
-url = "https://jira.rampgroup.com/rest/api/2/search?jql=project=CSM&maxResults=500"
+url = "https://jira.rampgroup.com/rest/api/2/search?jql=project=VHMIPC&maxResults=500"
 auth = ("tharun.morreddygari@rampgroup.com", "Mkumar#12345")
 headers = {"Accept": "application/json"}
 
