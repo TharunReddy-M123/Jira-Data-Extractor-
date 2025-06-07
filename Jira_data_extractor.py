@@ -121,7 +121,7 @@ if response.status_code == 200:
         'Priority', 'Status', 'Reporter_name', 'Creator_name', 'Resolution',
         'Resolution_date', 'Activity_date', 'Created_date', 'Updated_date',
         'Link', 'timeoriginalestimate', 'timeestimate',
-        'aggregatetimeoriginalestimate', 'timespent', 'aggregatetimespent',
+         'timespent', 
         'Sprint', 'bug_source', 'labels', 'Time_Spent', 'Estimated_Time'
     ]
 
