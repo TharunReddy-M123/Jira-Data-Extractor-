@@ -209,7 +209,7 @@ if response.status_code == 200:
     )
 
     # --- Begin: Overwrite Excel file if exists ---
-    output_path = r"D:\New_Jira_Data_Extractor.xlsx"
+    output_path = r"D:\New_Jira_Data_Extractor\New_Jira_Data_Extractor.xlsx"
     if os.path.exists(output_path):
         os.remove(output_path)
     # --- End: Overwrite Excel file if exists ---
