@@ -7,6 +7,7 @@ import pandas as pd
 from openpyxl.utils.dataframe import dataframe_to_rows
 import pytz
 import re
+import os  # Added for file operations
 
 def parse_jira_date(date_str):
     if not date_str:
@@ -126,7 +127,6 @@ if response.status_code == 200:
         'Sprint', 'bug_source', 'labels', 'Time_Spent', 'Estimated_Time'
     ]
     bold_font = Font(bold=True)
-    
     for col_num, header in enumerate(headers, start=1):
         cell = sheet.cell(row=1, column=col_num)
         cell.value = header
@@ -208,11 +208,17 @@ if response.status_code == 200:
         lambda x: x if x == 'In Time' else f"{x.days} days" if pd.notnull(x) else x
     )
 
+    # --- Begin: Overwrite Excel file if exists ---
+    output_path = r"D:\New_Jira_Data_Extractor.xlsx"
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    # --- End: Overwrite Excel file if exists ---
+
     # Export to Excel
     for r in dataframe_to_rows(df, header=False, index=False):
         sheet.append(r)
     
-    workbook.save(r"D:\jira_api_extractor\jira_issues123.xlsx")
-    print("Data exported successfully!")
+    workbook.save(output_path)
+    print(f"Data exported successfully to {output_path}!")
 else:
     print(f"Error {response.status_code}: {response.text}")
