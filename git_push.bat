@@ -5,9 +5,9 @@ echo ============================
 cd /d D:\New_Jira_Data_Extractor
 
 echo ============================
-echo Switching to 'main' branch
+echo Switching to 'master' branch
 echo ============================
-git checkout main
+git checkout master
 
 echo ============================
 echo Pulling latest changes
@@ -33,7 +33,7 @@ IF %ERRORLEVEL% EQU 1 (
 echo ============================
 echo Pushing to GitHub
 echo ============================
-git push origin main
+git push origin master
 
 echo ============================
 echo Git push completed.
