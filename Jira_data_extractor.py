@@ -1,13 +1,13 @@
 import requests
 import json
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Font, Alignment
 from datetime import datetime, timedelta
 import pandas as pd
 from openpyxl.utils.dataframe import dataframe_to_rows
 import pytz
 import re
-import os  # Added for file operations
+import os  # For file operations
 
 def parse_jira_date(date_str):
     if not date_str:
@@ -40,7 +40,6 @@ def format_jira_time(seconds):
 def format_timeoriginalestimate(seconds):
     if pd.isnull(seconds) or seconds is None or seconds <= 0:
         return "None"
-    # Calculate days based on 8-hour workdays
     workday_seconds = 28800  # 8 hours in seconds
     days = seconds // workday_seconds
     remaining_seconds = seconds % workday_seconds
@@ -97,7 +96,7 @@ def timespent(data):
         return ["None"] * len(data)
 
 # Jira API config
-url = "https://jira.rampgroup.com/rest/api/2/search?jql=project=DEV&maxResults=500"
+url = "https://jira.rampgroup.com/rest/api/2/search?jql=project=VHMIPC&maxResults=500"
 auth = ("tharun.morreddygari@rampgroup.com", "Mkumar#12345")
 headers = {"Accept": "application/json"}
 
@@ -108,16 +107,15 @@ if response.status_code == 200:
     issues = data.get("issues", [])
     fields_list = [issue.get("fields", {}) for issue in issues]
     
-    # Process batch data
     sprint_names = sprint(fields_list)
     bug_sources = bug_source(fields_list)
-    timespent_data = timespent(fields_list)  # Apply format_jira_time here
+    timespent_data = timespent(fields_list)
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Jira Issues"
     
-    # Headers with bold font
+    # Original headers list
     headers = [
         'index', 'Assignee_name', 'Project_name', 'Issue_type', 'Issue_key',
         'Priority', 'Status', 'Reporter_name', 'Creator_name', 'Resolution',
@@ -126,8 +124,16 @@ if response.status_code == 200:
         'aggregatetimeoriginalestimate', 'timespent', 'aggregatetimespent',
         'Sprint', 'bug_source', 'labels', 'Time_Spent', 'Estimated_Time'
     ]
+
+    # Columns to remove in Excel output
+    columns_to_remove = ['Resolution_date', 'aggregatetimeoriginalestimate', 'aggregatetimespent']
+    excel_headers = [h for h in headers if h not in columns_to_remove]
+
     bold_font = Font(bold=True)
-    for col_num, header in enumerate(headers, start=1):
+    center_alignment = Alignment(horizontal='center', vertical='center')
+
+    # Write headers with bold font
+    for col_num, header in enumerate(excel_headers, start=1):
         cell = sheet.cell(row=1, column=col_num)
         cell.value = header
         cell.font = bold_font
@@ -137,12 +143,10 @@ if response.status_code == 200:
     for idx, (issue, sprint_name, bug_src, timespent_value) in enumerate(zip(issues, sprint_names, bug_sources, timespent_data), start=1):
         fields = issue.get("fields", {})
         
-        # Date parsing
         created_date = parse_jira_date(fields.get("created"))
         updated_date = parse_jira_date(fields.get("updated"))
         resolution_date = parse_jira_date(fields.get("resolutiondate"))
 
-        # Time estimates
         time_estimate = fields.get("timeoriginalestimate")
         formatted_time_estimate = format_timeoriginalestimate(time_estimate)
 
@@ -162,11 +166,11 @@ if response.status_code == 200:
             created_date,
             updated_date,
             f"{url.split('/rest')[0]}/browse/{issue.get('key', '')}",
-            formatted_time_estimate,  # Use formatted timeoriginalestimate
+            formatted_time_estimate,
             fields.get("timeestimate", 0),
-            fields.get("aggregatetimeoriginalestimate", 0),
-            timespent_value,  # Use formatted timespent
-            fields.get("aggregatetimespent", 0),
+            #fields.get("aggregatetimeoriginalestimate", 0),
+            timespent_value,
+            #fields.get("aggregatetimespent", 0),
             sprint_name,
             bug_src,
             ", ".join(fields.get("labels", [])),
@@ -174,50 +178,50 @@ if response.status_code == 200:
             None
         ])
 
-    # DataFrame processing
     df = pd.DataFrame(issue_data, columns=headers)
 
-    # Convert date columns to datetime
-    df['Activity_date'] = pd.to_datetime(df['Activity_date'], errors='coerce')
-    df['Created_date'] = pd.to_datetime(df['Created_date'], errors='coerce')
-    df['Updated_date'] = pd.to_datetime(df['Updated_date'], errors='coerce')
+    # Drop unwanted columns before exporting to Excel
+    df_excel = df.drop(columns=columns_to_remove)
 
-    # Define SLA days
+    # Convert date columns to datetime
+    df_excel['Activity_date'] = pd.to_datetime(df_excel['Activity_date'], errors='coerce')
+    df_excel['Created_date'] = pd.to_datetime(df_excel['Created_date'], errors='coerce')
+    df_excel['Updated_date'] = pd.to_datetime(df_excel['Updated_date'], errors='coerce')
+
     max_days = 5
 
-    # Calculate Time_Spent and Estimated_Time
-    df['Time_Spent'] = df.apply(
+    df_excel['Time_Spent'] = df_excel.apply(
         lambda row: row['Activity_date'] - row['Created_date']
         if pd.notnull(row['Activity_date']) else row['Updated_date'] - row['Created_date'], 
         axis=1
     )
 
-    # Weekend adjustment calculation
-    df['Time_Spent'] = df['Time_Spent'].apply(
+    df_excel['Time_Spent'] = df_excel['Time_Spent'].apply(
         lambda x: x - timedelta(days=((x.days // 7) * 2 + (x.days % 7 >= 5))) 
         if pd.notnull(x) else x
     )
 
-    # Estimated time calculation
-    df['Estimated_Time'] = pd.to_timedelta(df['Time_Spent']) - pd.Timedelta(days=max_days)
-    df.loc[(df['Status'] == 'Done') & (df['Estimated_Time'] < pd.Timedelta(0)), 'Estimated_Time'] = 'In Time'
+    df_excel['Estimated_Time'] = pd.to_timedelta(df_excel['Time_Spent']) - pd.Timedelta(days=max_days)
+    df_excel.loc[(df_excel['Status'] == 'Done') & (df_excel['Estimated_Time'] < pd.Timedelta(0)), 'Estimated_Time'] = 'In Time'
 
-    # Final formatting
-    df['Time_Spent'] = df['Time_Spent'].apply(lambda x: f"{x.days} days" if pd.notnull(x) else x)
-    df['Estimated_Time'] = df['Estimated_Time'].apply(
+    df_excel['Time_Spent'] = df_excel['Time_Spent'].apply(lambda x: f"{x.days} days" if pd.notnull(x) else x)
+    df_excel['Estimated_Time'] = df_excel['Estimated_Time'].apply(
         lambda x: x if x == 'In Time' else f"{x.days} days" if pd.notnull(x) else x
     )
 
-    # --- Begin: Overwrite Excel file if exists ---
-    output_path = r"D:\New_Jira_Data_Extractor\New_Jira_Data_Extractor.xlsx"
+    output_path = r"D:\New_Jira_Data_Extractor.xlsx"
     if os.path.exists(output_path):
         os.remove(output_path)
-    # --- End: Overwrite Excel file if exists ---
 
-    # Export to Excel
-    for r in dataframe_to_rows(df, header=False, index=False):
-        sheet.append(r)
-    
+    # Write DataFrame rows to Excel, starting from row 2 (row 1 is header)
+    for r_idx, row in enumerate(dataframe_to_rows(df_excel, header=False, index=False), start=2):
+        for c_idx, value in enumerate(row, start=1):
+            cell = sheet.cell(row=r_idx, column=c_idx, value=value)
+            # Bold and center-align the 'index' column values (first column)
+            if c_idx == 1:
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+
     workbook.save(output_path)
     print(f"Data exported successfully to {output_path}!")
 else:
