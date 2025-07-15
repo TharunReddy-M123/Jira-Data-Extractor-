@@ -18,7 +18,11 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: List repository contents
+      run: ls -R
+      shell: bash
+
     - name: Run Jira extraction script
-      run: python jira_extraction.py
+      run: python path/to/jira_extraction.py
       env:
         JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
