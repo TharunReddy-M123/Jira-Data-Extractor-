@@ -1,0 +1,29 @@
+name: Jira Data Extraction
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  jira-extraction:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Jira extraction script
+      run: python jira_extraction.py
+      env:
+        JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
